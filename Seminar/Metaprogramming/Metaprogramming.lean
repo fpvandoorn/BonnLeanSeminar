@@ -242,7 +242,7 @@ example : ∀ p q : ℕ, p + q = q + p := by
 #check MetaM
 #check TermElabM
 #check TacticM
-#check Linter
+
 /- Monad map
 https://github.com/leanprover-community/mathlib4/wiki/Monad-map
 -/
@@ -250,9 +250,9 @@ https://github.com/leanprover-community/mathlib4/wiki/Monad-map
 /- Macros -/
 #check MacroM
 
-/- Commands -/
+/- Commands (also used for linters) -/
 #check CommandElabM
-
+#check Linter
 
 /- Pretty-printing -/
 #check DelabM
