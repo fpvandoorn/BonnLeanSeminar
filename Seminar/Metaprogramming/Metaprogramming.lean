@@ -24,8 +24,7 @@ It's still WIP and missing many chapters, but it already contains a lot of infor
 
 notation "𝔽₂" => ZMod 2
 
-open CharTwo in
-example (n : 𝔽₂) : n + n = 0 := by simp
+example (n : 𝔽₂) : n + n = 0 := by rw [CharTwo.add_self_eq_zero]
 
 
 
@@ -297,6 +296,7 @@ example (n m : ℕ) (h1 : 0 ≤ m) (h2 : n = 0) (h3 : m ≤ 9) : n = 0 := by
 
 example (p q : ℕ) : p + q = q + p := by
   my_assumption
+
 
 def double (x : ℕ) : ℕ := x + x
 
