@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 set_option linter.unusedVariables false
-set_option autoImplicit false
+set_option linter.unusedTactic false
 open Lean Meta Elab Parser Tactic PrettyPrinter Command Delaborator
 
 /- # Metaprogramming intro -/

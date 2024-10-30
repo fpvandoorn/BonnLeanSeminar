@@ -1,7 +1,6 @@
 /- Author: Arend Mellendijk -/
 
 import Mathlib.Tactic
-set_option autoImplicit false
 
 /- Our aim is to give a quick runthrough of monadic programming.
 
