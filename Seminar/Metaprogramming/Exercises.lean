@@ -67,3 +67,24 @@ def oneQuat : Quaternion ℝ := Quaternion.coe (1 : ℝ)
 -- These should work then:
 -- #check myH oneUH
 -- #check myH oneQuat
+
+/-! ## Tactics -/
+
+/- Exercise 3:
+Let's try to write a very simple solver for first-order logical formulae.
+(a) Define a tactic that repeatedly tries to apply introduction rules for implications, forall, negation and conjunction, and calls `assumption` to close the goals. Test it on a few statements.
+
+(b) Extend the tactic to also apply the introduction rule for the existential quantifier and test it on a few statements.
+
+(c) Extend the tactic to also apply the introduction rule for the disjunctions, trying one constructor first, and if it fails to close the goal, try the other constructor. Test it on a few statements.
+
+(d) Make sure that if the tactic fails, the resulting goal is what you get by only applying the safe rules (from part (a)), and the rules from parts (b) and (c) are not applied if they didn't close the goal. Test that you get the correct goal state on a few examples.
+
+Remark: To apply elimination rules, we would need more metaprogramming
+(e.g. to loop through all local hypotheses).
+Hint: I didn't actually try to write this myself, but I'm reasonably confident
+that this is all doable just by using macro/macro_rules.
+-/
+
+example (h : 3 + 4 = 5) : ∃ x : ℕ, 3 + 4 = x := by
+  repeat (first | constructor | assumption)
