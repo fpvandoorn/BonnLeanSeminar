@@ -82,8 +82,8 @@ def unexpListMap : Unexpander
 #check ∑ x ∈ [1,2,3], x ^ 3
 #check ∑ i ∈ Finset.empty, i
 
-/- You can also declare macros for tactics, commands.
-`(...) stands for "quotation". It reflects the  -/
+/- You can also declare macros for tactics, commands or similar.
+`(...) stands for "quotation". It reflects terms/tactics/commands into Syntax objects. -/
 
 macro "split" : tactic => `(tactic| constructor)
 macro "quit" : tactic => `(tactic| all_goals sorry)
