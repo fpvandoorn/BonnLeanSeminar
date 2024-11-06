@@ -90,10 +90,3 @@ Hint: I didn't actually try to write this myself, but I'm reasonably confident
 that this is all doable just by using macro/macro_rules.
 Hint 2: you might need to use `guard_target = _ ∧ _` or similar to check what the current goal is.
 -/
-
-example (h : 3 + 4 = 5) : 3 + 4 = 3 ∧ 2 = 2 := by
-  guard_target = _ ∧ _
-
-
-example (h : 3 + 4 = 5) : ∃ x : ℕ, 3 + 4 = x := by
-  guard_target = _ ∧ _
