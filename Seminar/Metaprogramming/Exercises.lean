@@ -76,17 +76,109 @@ def oneQuat : Quaternion ℝ := Quaternion.coe (1 : ℝ)
 
 /- Exercise 3:
 Let's try to write a very simple solver for first-order logical formulae.
-(a) Define a tactic that repeatedly tries to apply introduction rules for implications, forall, negation and conjunction, and calls `assumption` to close the goals. Test it on a few statements.
+(a) (*) Define a tactic that repeatedly tries to apply introduction rules for implications, forall,
+negation and conjunction, and calls `assumption` to close the goals. Test it on a few statements.
 
-(b) Extend the tactic to also apply the introduction rule for the existential quantifier and test it on a few statements.
+(b) (*) Extend the tactic to also apply the introduction rule for the existential quantifier
+and test it on a few statements.
 
-(c) Extend the tactic to also apply the introduction rule for the disjunctions, trying one constructor first, and if it fails to close the goal, try the other constructor. Test it on a few statements.
+(c) (*) Extend the tactic to also apply the introduction rule for the disjunctions,
+trying one constructor first, and if it fails to close the goal, try the other constructor.
+Test it on a few statements.
 
-(d) Make sure that if the tactic fails, the resulting goal is what you get by only applying the safe rules (from part (a)), and the rules from parts (b) and (c) are not applied if they didn't close the goal. Test that you get the correct goal state on a few examples.
+(d) (*) Make sure that if the tactic fails, the resulting goal is what you get by only applying the
+safe rules (from part (a)), and the rules from parts (b) and (c) are not applied if they didn't
+close the goal. Test that you get the correct goal state on a few examples.
 
 Remark: To apply elimination rules, we would need more metaprogramming
 (e.g. to loop through all local hypotheses).
 Hint: I didn't actually try to write this myself, but I'm reasonably confident
 that this is all doable just by using macro/macro_rules.
 Hint 2: you might need to use `guard_target = _ ∧ _` or similar to check what the current goal is.
+-/
+
+
+
+
+
+
+
+
+
+
+/- ## More on tactics -/
+
+/- Exercise 4.
+(a) Define (an elaborator for) a tactic that prints all the
+options you've currently set.
+The list of all options has type `Lean.Options`.
+Use Loogle to figure out how to get the currently set options. -/
+
+
+/-
+(b) Define a tactic that toggles a specific boolean option
+(e.g. `profiler`, but feel free to hard-code another one) and test it.
+You can test the profiler with the `sleep` tactic.
+-/
+
+
+/-
+(c) Define an *elaborator* (not a macro)
+that executes a given tactic three times.
+Hint: You can use `evalTactic` to evaluate tactic syntax.
+-/
+
+/- Exercise 5.
+Jump to the definition of your favorite tactic, read the program it executes, and try to understand
+each step. Jump into definitions of subroutines to try to understand them.
+Note: often there is a declaration in the `Lean.Meta` or `Lean.MVarId` namespace
+that implements most of the functionality.
+Note: Don't go into the internals of term elaboration or something,
+that will likely be too overwhelming.
+Easy examples: `group`, `noncomm_ring`
+Good/somewhat hard examples: `exact`, `constructor`, `apply`, `field_simp`, `gcongr`
+Hard examples: `rw`, `ring`, `norm_num`, `abel`, `@[simps]`, `@[to_additive]`
+
+-/
+
+/- Exercise 6.
+Let's continue with the tactic from Exercise 3.
+
+(a) (*) Define a tactic that applies the elimination rule to all conjunctions and existential
+quantifiers in the local context
+(before applying introduction rules for disjunctions / existential quantifiers).
+
+(b) (*) Define a tactic that applies the elimination rule to all disjunctions in the local context
+(before applying unsafe introduction rules, after applying all safe rules)
+
+(c) (*) For any implication `p → q` or `¬` in the local context, see if `p` occurs in the local context,
+and if so, replace the implication by `q`.
+
+(d) (*) For any universal quantifier, instantiate the quantifier with all terms in the local context
+with the correct type. Make sure this doesn't loop, e.g. by just doing this step once.
+
+(e) (***) To make sure that (d) doesn't loop, but you instantiate all the quantifiers you can,
+use a monad transformer that keeps track of an additional piece of state.
+This state is consists of pairs of the form (hypothesis, term) that you've already instantiated
+before.
+The extra state could be `Lean.RBMap` where the key is the (internal name of the) local hypothesis,
+and the value is an `Array` of terms that you've already instantiated.
+
+Optionally:
+(*) Extend this tactic to handle `↔`
+(*****) Extend this tactic to handle `=`
+
+Hint: To run other tactics, writing its syntax and then using `evalTactic` is often easier than
+looking at the internals of such tactics and apply those.
+-/
+
+
+/-
+
+Exercise 7:
+Improve an existing tactic implemented in Mathlib and PR it to Mathlib.
+
+Examples:
+- (***) Have the `@[gcongr]` attribute be able to recognize `↔`-lemmas
+- (*****) Mathlib issues #1074, #1428, #11622, #12564, ...
 -/

@@ -1,7 +1,7 @@
 import Mathlib.Tactic
 set_option linter.unusedVariables false
 set_option linter.unusedTactic false
-open Lean Meta Elab Parser Tactic PrettyPrinter Command Delaborator
+open Lean Meta Elab Parser Tactic Command PrettyPrinter Delaborator
 
 /- # Metaprogramming intro -/
 
@@ -130,9 +130,6 @@ They are macros that generate new macros. -/
 
 
 
-
-
-
 /-
 `macro` is short for `syntax` + `macro_rules`.
 You can declare multiple macro rules
@@ -242,38 +239,56 @@ example : ∀ p q : ℕ, p + q = q + p := by
 #check TermElabM
 #check TacticM
 
-/- Monad map
+/-
+For reference, the Mathlib wiki has a monad map
 https://github.com/leanprover-community/mathlib4/wiki/Monad-map
+
+Below are some other monads, but let's ignore them for now.
 -/
 
 /- Macros -/
-#check MacroM
+#check MacroM -- Exception + context + state
 
-/- Commands (also used for linters) -/
-#check CommandElabM
-#check Linter
+/- Commands -/
+#check CommandElabM -- IO + context + state
 
 /- Pretty-printing -/
-#check DelabM
-#check UnexpandM
-#check FormatterM
+#check DelabM -- MetaM + context + state
+#check UnexpandM -- Exception + can read syntax
+#check FormatterM -- CoreM + context + state
 
 /- Some important concepts -/
-#check Environment
-#check Expr
-#check Syntax
 
+/- A name is basically a list of strings.
+All elements except the last are the namespaces corresponding to that name.
+(Names can also contain numerical components,
+which is used for some internal purposes) -/
 #check Name
-#check Level
-#check ConstantInfo
-#check MVarId
+#check `Nat.add
+#eval `Nat.add
+#eval `Nat ++ `add
+#eval (Name.anonymous.str "Nat").str "add"
 
-
-
-
-
-
-
+/- An expression is an (elaborated) term.
+It can be a
+* bound variable (the second `x` in `fun x ↦ x`)
+* free variable (hypotheses in the local context)
+* metavariable (terms to be synthesized)
+* sort (`Type _`)
+* constant (any declaration)
+* application
+* lambda
+* forall (including Pi-types / arrow types)
+* A let expression (`let x := 3; x + x`)
+* A literal (an explicit string or number)
+* an expression tagged with some metadata
+  (e.g. an annotation to print an expression in a certain way)
+* a projection (think of `x.1` for `x : α × β`) (*)
+-/
+#print Expr
+#check (5 : ℤ)
+#check fun x : ℕ × ℕ ↦ x.1
+#print Prod.fst
 
 /-! ## Let's write some basic tactics -/
 
@@ -282,10 +297,18 @@ We go through each assumption and look whether the type of the assumption is
 *definitionally equal* to the target. -/
 
 elab "my_assumption" : tactic => do
+  /- A *goal* in a tactic state consists of a metavariable that
+  will be instantiated with the proof term after executing the tactic script.
+  `getMainTarget` gives the type of the metavariable (i.e. the goal). -/
   let target ← getMainTarget
+  /- Loop through all hypotheses in the local context -/
   for ldecl in ← getLCtx do
+    /- Ignore certain "implementation details"
+    (these are also not printed in the goal) -/
     if ldecl.isImplementationDetail then continue
+    /- Check for *definitional equality* -/
     if ← isDefEq ldecl.type target then
+      /- -/
       closeMainGoal `my_assumption ldecl.toExpr
       return
   throwTacticEx `my_assumption (← getMainGoal)
@@ -297,6 +320,9 @@ example (n m : ℕ) (h1 : 0 ≤ m) (h2 : n = 0) (h3 : m ≤ 9) : n = 0 := by
 example (p q : ℕ) : p + q = q + p := by
   my_assumption
 
+
+/- The example below works at `semireducible` transparency,
+but not at reducible transparency. -/
 
 def double (x : ℕ) : ℕ := x + x
 
@@ -317,13 +343,12 @@ example (a b c d : ℕ) (h : a = b) (h' : c = d) : a + c = b + d := by
   have H := congrArg₂ HAdd.hAdd h h'
   exact H
 
-elab "add_eq" eq₁:ident eq₂:ident " with " new:ident : tactic => do
-  let goal ← getMainGoal
-  goal.withContext do
+elab "add_eq" eq₁:ident eq₂:ident " with " new:ident : tactic =>
+  withMainContext do -- ignore this for now
     let newTerm  ← `(congrArg₂ HAdd.hAdd $eq₁ $eq₂)
     let prf ← elabTerm newTerm none
     let typ ← inferType prf
-    let (_newFVars, newGoal) ← goal.assertHypotheses
+    let (_newFVars, newGoal) ← (← getMainGoal).assertHypotheses
       #[{userName := new.getId, type := typ, value := prf}]
     replaceMainGoal [newGoal]
 
@@ -340,8 +365,7 @@ syntax "add_eq'" ident ident ("with" ident)? : tactic
 elab_rules : tactic
 | `(tactic| add_eq' $eq₁:ident $eq₂:ident $[with $new]?) => do
   logInfo m!"{new}" -- we print the variable `new`
-  let goal ← getMainGoal
-  goal.withContext do
+  withMainContext do
     let newTerm  ← `(congr (congrArg HAdd.hAdd $eq₁) $eq₂)
     let prf ← elabTerm newTerm none
     let typ ← inferType prf
@@ -349,7 +373,7 @@ elab_rules : tactic
     let newName := match new with
     | some ident => ident.getId
     | none => `newEq
-    let (_newFVars, newGoal) ← goal.assertHypotheses
+    let (_newFVars, newGoal) ← (← getMainGoal).assertHypotheses
       #[{userName := newName, type := typ, value := prf}]
     replaceMainGoal [newGoal]
 
@@ -358,13 +382,18 @@ example (a b c d : ℕ) (h : a = b) (h' : c = d) : a + c = b + d  := by
   assumption
 
 
+/- Let's see what goes wrong when we don't write `withMainContext`. -/
+example (a b c d : ℕ) (h : a = b) : c = d → a + c = b + d  := by
+  intro h'
+  add_eq' h h' with H
+  assumption
 
 
 
 
 
-
-/- Here we do something similar: we multiply both sides of a hypothesis by
+/- Here we do something similar:
+we multiply both sides of a hypothesis by
 a constant -/
 
 example (a b c : ℤ) (hyp : a = b) : c*a = c*b := by
@@ -390,3 +419,49 @@ elab "mul_left" x:term l:location : tactic => do
 example (a b c : ℤ) (hyp : a = b) : c*a = c*b := by
   mul_left c at hyp
   exact hyp
+
+
+/- Let's take another look at the environment -/
+
+#check Environment
+
+run_cmd do
+  let env ← getEnv
+  let nConsts := env.constants.fold (init := 0) fun n _ _ ↦ n + 1
+  logInfo m!"Number of constants known to Lean: {nConsts}"
+  let nConsts' := env.const2ModIdx.size
+  logInfo m!"Number of constants in imported files, including some hidden constants \
+    (e.g. constants generated by the code generator that will never be sent to the Lean kernel): \
+    {nConsts'}" -- notice the escapes for line breaks.
+  logInfo m!"Current Module: {env.mainModule}"
+  logInfo m!"Direct imports: {env.imports}"
+  logInfo m!"Number of (indirect) imports: {env.header.moduleNames.size}"
+
+/- Note: `run_cmd` runs a program in the `CommandElabM` monad,
+If you need something from `CoreM` or `MetaM`, use `run_meta`. -/
+
+run_meta do
+  let nm1 := `Nat.add -- use any def here
+  let c1 := (← getEnv).find? nm1 |>.get!
+  logInfo m!"{nm1} has type {c1.type} and value\n {c1.value!}"
+  let .defnInfo d1 := c1 | unreachable!
+  logInfo m!"We can also obtain its value this way:\n {d1.value}"
+
+  -- let nm2 := `Group -- use another structure/class/inductive here
+  -- let c2 := (← getEnv).find? nm2 |>.get!
+  -- logInfo m!"{nm2} has type {c2.type}"
+  -- let .inductInfo d2 := c2 | unreachable!
+  -- logInfo m!"{nm2} has {d2.numParams} parameter(s), {d2.numIndices} indices and constructor \
+  --   {d2.ctors.head!}"
+
+  -- let nm3 := `Group -- use any structure/class here
+  -- let c3 := getStructureInfo? (← getEnv) nm3 |>.get!
+  -- logInfo m!"{nm3} has fields {c3.fieldNames}"
+
+
+
+/- Some neat tricks: there are some custom term elaborators -/
+
+#check eval% 2 + 3
+#check type_of% (2 + 3)
+#check fun α β γ δ ↦ (prod_assoc% : (α × β) × (γ × δ) ≃ α × (β × γ) × δ)
