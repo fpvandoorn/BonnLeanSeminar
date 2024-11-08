@@ -238,7 +238,7 @@ example : ∀ p q : ℕ, p + q = q + p := by
 #check MetaM
 #check TermElabM
 #check TacticM
-
+-- #check MetaM.run
 /-
 For reference, the Mathlib wiki has a monad map
 https://github.com/leanprover-community/mathlib4/wiki/Monad-map
@@ -277,7 +277,7 @@ It can be a
 * sort (`Type _`)
 * constant (any declaration)
 * application
-* lambda
+* lambda (fun x : ℕ ↦ f x)
 * forall (including Pi-types / arrow types)
 * A let expression (`let x := 3; x + x`)
 * A literal (an explicit string or number)
@@ -290,13 +290,14 @@ It can be a
 #check fun x : ℕ × ℕ ↦ x.1
 #print Prod.fst
 
+
 /-! ## Let's write some basic tactics -/
 
 /- Now let's implement an actual tactic: the assumption tactic.
 We go through each assumption and look whether the type of the assumption is
 *definitionally equal* to the target. -/
 
-elab "my_assumption" : tactic => do
+elab "my_assumption" : tactic => withMainContext do
   /- A *goal* in a tactic state consists of a metavariable that
   will be instantiated with the proof term after executing the tactic script.
   `getMainTarget` gives the type of the metavariable (i.e. the goal). -/
@@ -306,16 +307,18 @@ elab "my_assumption" : tactic => do
     /- Ignore certain "implementation details"
     (these are also not printed in the goal) -/
     if ldecl.isImplementationDetail then continue
+    -- logInfo m!"Checking hypothesis {ldecl.type}"
     /- Check for *definitional equality* -/
-    if ← isDefEq ldecl.type target then
+    if ← withReducible (isDefEq ldecl.type target) then
       /- -/
-      closeMainGoal `my_assumption ldecl.toExpr
-      return
+    closeMainGoal `my_assumption ldecl.toExpr
+    return
   throwTacticEx `my_assumption (← getMainGoal)
     m!"unable to find matching hypothesis of type {indentExpr target}"
 
-example (n m : ℕ) (h1 : 0 ≤ m) (h2 : n = 0) (h3 : m ≤ 9) : n = 0 := by
+theorem foo (n m : ℕ) (h1 : 0 ≤ m) (h2 : n = 0) (h3 : m ≤ 9) : n = 0 := by
   my_assumption
+
 
 example (p q : ℕ) : p + q = q + p := by
   my_assumption
@@ -324,7 +327,7 @@ example (p q : ℕ) : p + q = q + p := by
 /- The example below works at `semireducible` transparency,
 but not at reducible transparency. -/
 
-def double (x : ℕ) : ℕ := x + x
+@[reducible] def double (x : ℕ) : ℕ := x + x
 
 example (n : ℕ) (h1 : double n = 12) : n + n = 12 := by
   my_assumption
@@ -378,8 +381,8 @@ elab_rules : tactic
     replaceMainGoal [newGoal]
 
 example (a b c d : ℕ) (h : a = b) (h' : c = d) : a + c = b + d  := by
-  add_eq' h h' with H
-  assumption
+  add_eq' h h'
+  my_assumption
 
 
 /- Let's see what goes wrong when we don't write `withMainContext`. -/
@@ -439,7 +442,9 @@ run_cmd do
 
 /- Note: `run_cmd` runs a program in the `CommandElabM` monad,
 If you need something from `CoreM` or `MetaM`, use `run_meta`. -/
-
+#print InductiveVal
+#print ConstantVal
+#print ConstantInfo
 run_meta do
   let nm1 := `Nat.add -- use any def here
   let c1 := (← getEnv).find? nm1 |>.get!
@@ -447,16 +452,16 @@ run_meta do
   let .defnInfo d1 := c1 | unreachable!
   logInfo m!"We can also obtain its value this way:\n {d1.value}"
 
-  -- let nm2 := `Group -- use another structure/class/inductive here
-  -- let c2 := (← getEnv).find? nm2 |>.get!
-  -- logInfo m!"{nm2} has type {c2.type}"
-  -- let .inductInfo d2 := c2 | unreachable!
-  -- logInfo m!"{nm2} has {d2.numParams} parameter(s), {d2.numIndices} indices and constructor \
-  --   {d2.ctors.head!}"
+  let nm2 := `Group -- use another structure/class/inductive here
+  let c2 := (← getEnv).find? nm2 |>.get!
+  logInfo m!"{nm2} has type {c2.type}"
+  let .inductInfo d2 := c2 | unreachable!
+  logInfo m!"{nm2} has {d2.numParams} parameter(s), {d2.numIndices} indices and constructor \
+    {d2.ctors.head!}"
 
-  -- let nm3 := `Group -- use any structure/class here
-  -- let c3 := getStructureInfo? (← getEnv) nm3 |>.get!
-  -- logInfo m!"{nm3} has fields {c3.fieldNames}"
+  let nm3 := `Group -- use any structure/class here
+  let c3 := getStructureInfo? (← getEnv) nm3 |>.get!
+  logInfo m!"{nm3} has fields {c3.fieldNames}"
 
 
 
@@ -465,3 +470,9 @@ run_meta do
 #check eval% 2 + 3
 #check type_of% (2 + 3)
 #check fun α β γ δ ↦ (prod_assoc% : (α × β) × (γ × δ) ≃ α × (β × γ) × δ)
+
+
+structure Foo where
+  x : Fin 2
+  y : Bool
+deriving Fintype, Inhabited, Repr
