@@ -56,10 +56,8 @@ def elabDualize : Syntax → CoreM Name
 def getNewValue (nm : Name) : AttrM Expr := do
   let some (.thmInfo decl) := (← getEnv).find? nm | unreachable!
   MetaM.run' do
-    trace[dualize] "Current local context {(← getLCtx).size} and instances {(← getLocalInstances).size}"
     forallTelescope decl.type fun args _conclusion => do
       trace[dualize] "Declaration has arguments {args} and conclusion {_conclusion}"
-      trace[dualize] "Current local context {(← getLCtx).size} and instances {(← getLocalInstances).size}"
       if args.size < 2 then
         throwError "theorem must have at least two arguments."
       trace[dualize] "First argument {args[0]!} has type {← inferType args[0]!} which is a \
@@ -72,6 +70,7 @@ def getNewValue (nm : Name) : AttrM Expr := do
       trace[dualize] "New expression: {newValue} which has type {← inferType newValue}"
       return newValue
 
+      -- trace[dualize] "Current local context {(← getLCtx).size} and instances {(← getLocalInstances).size}"
 
       -- let .sort firstArgLevel ← inferType args[0]! |
       --   throwError "first argument must be a sort."
