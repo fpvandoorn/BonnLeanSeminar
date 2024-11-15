@@ -177,8 +177,12 @@ looking at the internals of such tactics and apply those.
 
 Exercise 7:
 Improve an existing tactic implemented in Mathlib and PR it to Mathlib.
+If you do this, post on the "Lean in Bonn" Zulip that you're working on this.
 
 Examples:
 - (***) Have the `@[gcongr]` attribute be able to recognize `↔`-lemmas
-- (*****) Mathlib issues #1074, #1428, #11622, #12564, ...
+- (*****) implement one item from #1074.
+  - (***) The easiest one is to let `to_additive` correctly handle `extends` clauses of structures.
+- (*****) implement #11622 or #12564
+- (*****) make the dualize tactic better and more robust and port it to Mathlib.
 -/
