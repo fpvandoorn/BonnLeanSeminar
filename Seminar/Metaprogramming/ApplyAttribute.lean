@@ -12,6 +12,7 @@ run_cmd do
   logInfo m!"State: {state.toList}"
 
 
+attribute [my_attribute] f
 
 
 
@@ -24,16 +25,15 @@ run_cmd do
 
 
 
+set_option trace.dualize true
 
--- set_option trace.dualize true
-
--- whatsnew in
--- @[dualize my_ge_trans]
+whatsnew in
+@[dualize my_ge_trans]
 lemma my_le_trans {α : Type*} [Preorder α] {a b c : α} :
     a ≤ b → b ≤ c → a ≤ c := le_trans
 
-lemma my_ge_trans : ∀ {α : Type*} [Preorder α] {a b c : α},
-    a ≥ b → b ≥ c → a ≥ c := @fun α _ ↦ @my_le_trans αᵒᵈ _
+-- lemma my_ge_trans : ∀ {α : Type*} [Preorder α] {a b c : α},
+--     a ≥ b → b ≥ c → a ≥ c := @fun α _ ↦ @my_le_trans αᵒᵈ _
 
 #print my_ge_trans
 

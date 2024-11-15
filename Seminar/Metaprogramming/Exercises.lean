@@ -2,7 +2,7 @@ import Mathlib
 
 set_option linter.unusedVariables false
 set_option linter.unusedTactic false
-open Lean Meta Elab Parser Tactic PrettyPrinter Command Delaborator
+open Lean Meta Elab Parser Tactic PrettyPrinter Command Delaborator Expr
 
 /-!
 # Exercises about meta-programming
@@ -97,10 +97,35 @@ that this is all doable just by using macro/macro_rules.
 Hint 2: you might need to use `guard_target = _ ∧ _` or similar to check what the current goal is.
 -/
 
+syntax "safe_step" : tactic
+syntax "safe_splitting_step" : tactic
+syntax "unsafe_step" : tactic
+syntax "fol" : tactic
+
+macro_rules | `(tactic|safe_step) => `(tactic| safe_splitting_step)
+macro_rules | `(tactic|safe_step) => `(tactic| intro)
+macro_rules | `(tactic|safe_step) => `(tactic| assumption)
+
+macro_rules | `(tactic|safe_splitting_step) => `(tactic| guard_target = _ ∧ _; constructor)
 
 
+macro_rules | `(tactic|unsafe_step) => `(tactic| focus (guard_target = Exists _; constructor; fol; done))
+macro_rules | `(tactic|unsafe_step) => `(tactic| focus (guard_target = _ ∨ _; left; fol; done))
+macro_rules | `(tactic|unsafe_step) => `(tactic| focus (guard_target = _ ∨ _; right; fol; done))
 
 
+macro_rules | `(tactic|fol) => `(tactic| (first | safe_step; fol | all_goals (focus unsafe_step) | skip))
+
+
+example : ∀ (P : ℕ → Prop), P 3 → P 4 → ∃ n, P n ∧ P 4 := by
+  fol
+
+
+example : ∀ (P : ℕ → Prop), P 3 → P 4 → P 1 ∨ P 3 ∨ P 2 := by
+  fol
+
+example : ∀ (P : ℕ → Prop), P 3 → P 4 → P 3 ∧ (P 1 ∨ P 2) := by
+  fol
 
 
 
@@ -114,13 +139,15 @@ options you've currently set.
 The list of all options has type `Lean.Options`.
 Use Loogle to figure out how to get the currently set options. -/
 
-
 /-
 (b) Define a tactic that toggles a specific boolean option
 (e.g. `profiler`, but feel free to hard-code another one) and test it.
+Note: Options are in the context and not in the state,
+so to implement this you have to write a tactic that takes
+another tactic (sequence) as argument
 You can test the profiler with the `sleep` tactic.
 -/
-
+-- example := by set_option
 
 /-
 (c) Define an *elaborator* (not a macro)
@@ -171,6 +198,47 @@ Optionally:
 Hint: To run other tactics, writing its syntax and then using `evalTactic` is often easier than
 looking at the internals of such tactics and apply those.
 -/
+
+elab "split_conjuction" : tactic => withMainContext do
+  for ldecl in ← getLCtx do
+    if ldecl.isImplementationDetail then continue
+    if isAppOf ldecl.type `And then
+      let nm := mkIdent ldecl.userName
+      evalTactic (← `(tactic|obtain ⟨_, _⟩ := $nm))
+      return
+  throwTacticEx `split_conjunction (← getMainGoal)
+    m!"No hypothesis is a conjunction."
+
+macro_rules | `(tactic|safe_step) => `(tactic| split_conjuction)
+
+
+example : ∀ (P Q R : Prop), P ∧ Q → Q ∧ R → P ∧ R := by
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+  safe_step
+
+elab "split_disjunction" : tactic => withMainContext do
+  let target ← getMainTarget
+  for ldecl in ← getLCtx do
+    if ldecl.isImplementationDetail then continue
+    if isAppOf ldecl.type `Or then
+      let nm := mkIdent ldecl.userName
+      evalTactic (← `(tactic|obtain (_|_) := $nm))
+      return
+  throwTacticEx `split_conjunction (← getMainGoal)
+    m!"No hypothesis is a disjunction."
+
+macro_rules | `(tactic|safe_splitting_step) => `(tactic| split_disjunction)
+
+example : ∀ (P Q R : Prop), P ∨ (Q ∨ R) → (P ∨ Q) ∨ R := by
+  fol
 
 
 /-

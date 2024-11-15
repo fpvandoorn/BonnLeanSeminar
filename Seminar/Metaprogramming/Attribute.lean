@@ -3,6 +3,14 @@ import Mathlib.Tactic
 -- set_option linter.unusedTactic false
 open Lean Meta Elab
 
+
+
+
+
+
+
+
+
 /- Tag-attributes give an easy way to tag a collection of declarations,
 or to run a command on the tagged declarations. -/
 
@@ -29,11 +37,12 @@ syntax (name := dualize) "dualize" ident : attr
 
 initialize registerTraceClass `dualize
 
-def translation : NameMap Name := .ofList [(`LT.lt, `GT.gt), (`LE.le, `GE.ge)]
+def translation : NameMap Name :=
+  .ofList [(`LT.lt, `GT.gt), (`LE.le, `GE.ge)]
 
 def traverseExpr (e : Expr) : Expr :=
-  e.replaceRec fun _r e ↦
-    match e with
+  e.replace fun subExpr ↦
+    match subExpr with
     | .const oldName ls => Id.run do
       if let some newName := translation.find? oldName then
         return some (mkConst newName ls)
@@ -57,7 +66,6 @@ def getNewValue (nm : Name) : AttrM Expr := do
   let some (.thmInfo decl) := (← getEnv).find? nm | unreachable!
   MetaM.run' do
     forallTelescope decl.type fun args _conclusion => do
-      trace[dualize] "Declaration has arguments {args} and conclusion {_conclusion}"
       if args.size < 2 then
         throwError "theorem must have at least two arguments."
       trace[dualize] "First argument {args[0]!} has type {← inferType args[0]!} which is a \
