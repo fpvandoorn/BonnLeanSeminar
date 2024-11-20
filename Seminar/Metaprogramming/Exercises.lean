@@ -182,7 +182,7 @@ If you do this, post on the "Lean in Bonn" Zulip that you're working on this.
 Examples:
 - (***) Have the `@[gcongr]` attribute be able to recognize `↔`-lemmas
 - (*****) implement one item from #1074.
-  - (***) The easiest one is to let `to_additive` correctly handle `extends` clauses of structures.
+  - (***) The easiest one is to let `to_additive` correctly handle `extends` clauses of structures. [EDIT: I did this myself in #19302]
 - (*****) implement #11622 or #12564
 - (*****) make the dualize tactic better and more robust and port it to Mathlib.
 -/
