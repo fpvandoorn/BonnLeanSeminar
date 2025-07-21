@@ -1,0 +1,1 @@
+The order to read these files is [../MonadicProgramming.lean], then [Metaprogramming.lean], after which you can do the exercises: [Exercises.lean]. You can also see a simple example of an attribute in [Attribute.lean] and look at the tests in [ApplyAttribute.lean].
