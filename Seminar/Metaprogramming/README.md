@@ -1,1 +1,3 @@
-The order to read these files is [../MonadicProgramming.lean], then [Metaprogramming.lean], after which you can do the exercises: [Exercises.lean]. You can also see a simple example of an attribute in [Attribute.lean] and look at the tests in [ApplyAttribute.lean].
+The order to read these files is [../MonadicProgramming.lean](../MonadicProgramming.lean) if you need an introduction in monadic programming, then [Metaprogramming.lean](Metaprogramming.lean), after which you can do the [exercises](Exercises.lean). You can also see a simple example of an attribute in [Attribute.lean](Attribute.lean) and look at the tests in [ApplyAttribute.lean](ApplyAttribute.lean).
+
+The explanations in these files are very brief, so other sources on the [learning page](https://leanprover-community.github.io/learn.html#meta-programming-and-tactic-writing) provide more information.
